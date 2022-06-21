@@ -1,0 +1,28 @@
+syntax = "proto3";
+option go_package = "generatedfiles/";
+service AssignTeamMate{
+    // Sends a greeting
+    rpc AssignTeamMate (AssignTeamRequestgRPC) returns (AssignTeamResponsegRPC) {
+    }
+}
+
+// The request message containing the user's name.
+message AssignTeamRequestgRPC {
+    string name = 1;
+    int32 id = 2;
+    string courseCode = 3;
+}
+message TeamDetailsgRPC {
+  string member1 = 1;
+  string member2 = 2;
+  int32 member1id = 3;
+  int32 member2id = 4;
+  string courseCode = 5;
+  int32 groupId = 6;
+}
+
+// The response message containing the greetings
+message AssignTeamResponsegRPC {
+    string message = 1;
+    TeamDetailsgRPC teamDetails = 2;
+}
