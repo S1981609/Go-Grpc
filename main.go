@@ -1,6 +1,7 @@
 package main
 
 import (
+	generatedfiles "Go-Grpc/generatedfiles"
 	"context"
 	"database/sql"
 	"flag"
@@ -8,6 +9,8 @@ import (
 	"log"
 	"math/rand"
 	"net"
+
+	_ "github.com/lib/pq"
 
 	"google.golang.org/grpc"
 )
@@ -19,14 +22,6 @@ var (
 type Students struct {
 	Name string
 	Id   int
-}
-type TeamDetails struct {
-	Member1    string
-	Member2    string
-	Member1id  int
-	Member2id  int
-	CourseCode string
-	GroupId    int
 }
 
 const (
@@ -52,11 +47,11 @@ type AssignTeamMateService struct {
 	//generatedfiles.UnimplementedAssignTeamMateServer
 }
 
-func (s AssignTeamMateService) AssignTeamMate(context.Context, *generatedfiles.AssignTeamRequestgRPC) (*generatedfiles.AssignTeamResponsegRPC, error) {
+func (s AssignTeamMateService) AssignTeamMate(ctx context.Context, request *generatedfiles.AssignTeamRequestgRPC) (*generatedfiles.AssignTeamResponsegRPC, error) {
 	//start paste
 
-	if &generatedfiles.AssignTeamRequestgRPC.Id == 0 || &generatedfiles.AssignTeamRequestgRPC.CourseCode == "" {
-		&generatedfiles.AssignTeamResponsegRPC{Message: "You are missing required paramters parameter."}
+	if request.GetId() == 0 || request.GetCourseCode() == "" {
+		return &generatedfiles.AssignTeamResponsegRPC{Message: "You are missing required paramters parameter."}, nil
 	} else {
 		db := setupDB()
 		rows, err := db.Query("SELECT * FROM students")
@@ -82,7 +77,7 @@ func (s AssignTeamMateService) AssignTeamMate(context.Context, *generatedfiles.A
 		//fmt.Println("Size of students array", len(students))
 		var filteredStudents []Students
 		for i := 0; i < len(students); i++ { //looping from 0 to the length of the array
-			if students[i].Id == &generatedfiles.AssignTeamRequestgRPC.Id {
+			if students[i].Id == int(request.GetId()) {
 				flag = 1
 			} else {
 				filteredStudents = append(filteredStudents, students[i])
@@ -93,21 +88,21 @@ func (s AssignTeamMateService) AssignTeamMate(context.Context, *generatedfiles.A
 		if flag == 1 {
 			n := rand.Int() % len(filteredStudents)
 			assignedTeamMate := Students{Name: filteredStudents[n].Name, Id: filteredStudents[n].Id}
-			teamDetails := TeamDetails{Member1: &generatedfiles.AssignTeamRequestgRPC.Name, Member2: assignedTeamMate.Name, Member1id: &generatedfiles.AssignTeamRequestgRPC.Id, Member2id: assignedTeamMate.Id, CourseCode: &generatedfiles.AssignTeamRequestgRPC.CourseCode}
+			//teamDetails := TeamDetails{Member1: request.GetName(), Member2: assignedTeamMate.Name, Member1id: int(request.GetId()), Member2id: assignedTeamMate.Id, CourseCode: request.GetCourseCode()}
 			var lastInsertID int = 0
-			err := db.QueryRow("INSERT INTO team_info(member1,member2,member1_id,member2_id,course_code) VALUES($1, $2, $3, $4, $5) RETURNING group_id;", &generatedfiles.AssignTeamRequestgRPC.Name, assignedTeamMate.Name, &generatedfiles.AssignTeamRequestgRPC.Id, assignedTeamMate.Id, &generatedfiles.AssignTeamRequestgRPC.CourseCode).Scan(&lastInsertID)
+			err := db.QueryRow("INSERT INTO team_info(member1,member2,member1_id,member2_id,course_code) VALUES($1, $2, $3, $4, $5) RETURNING group_id;", request.GetName(), assignedTeamMate.Name, request.GetId(), assignedTeamMate.Id, request.GetCourseCode()).Scan(&lastInsertID)
 			db.Close()
 			if err != nil {
 				panic(err)
 			}
-			&generatedfiles.AssignTeamResponsegRPC{Message: "The team has been inserted successfully!", TeamDetails: teamDetails}
+			return &generatedfiles.AssignTeamResponsegRPC{Message: "The team has been inserted successfully!", TeamDetails: &generatedfiles.TeamDetailsgRPC{Member1: request.GetName(), Member2: assignedTeamMate.Name, CourseCode: request.GetCourseCode()}}, nil
 		} else {
-			&generatedfiles.AssignTeamResponsegRPC{Message: "Requesting Student's details are missing in db!"}
+			return &generatedfiles.AssignTeamResponsegRPC{Message: "Requesting Student's details are missing in db!"}, nil
 		}
 
 	}
 	//end paste
-	return &generatedfiles.AssignTeamResponsegRPC{}
+	return nil, nil
 }
 
 func main() {
